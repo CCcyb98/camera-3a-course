@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Camera 3A · 60 天</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="assets/css/theme.css?v=35">
+  <link rel="stylesheet" href="assets/css/components.css?v=35">
+</head>
+<body>
+  <!-- 密码门：默认隐藏（CSS 处理），如果需要会由 gate.js 显示 -->
+  <div id="gateMask" class="gate-mask" style="display:none">
+    <div class="gate-card">
+      <h1>📷 Camera 3A · 60 天</h1>
+      <p>请输入访问密码</p>
+      <input type="password" id="gateInput" class="gate-input" placeholder="••••••" autofocus>
+      <button id="gateBtn" class="btn gate-btn">进入</button>
+      <div id="gateError" class="gate-error"></div>
+    </div>
+  </div>
+
+  <header class="topbar" id="topbar" style="display:none">
+    <button class="menu-toggle" id="menuToggle" aria-label="菜单">☰</button>
+    <div class="brand">📷 Camera 3A · 60 天</div>
+    <div class="dashboard" id="dashboard"></div>
+  </header>
+  <main class="layout" id="layout" style="display:none">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    <nav class="sidebar" id="sidebar"></nav>
+    <section class="content" id="content">
+      <p class="loading">加载中…</p>
+    </section>
+  </main>
+  <!-- 版本徽章：fetch /.version 自动显示当前部署版本，判断主机是否已更新 -->
+  <div id="versionBadge" class="version-badge" title="当前部署版本（每次打包自动刷新）">v...</div>
+  <script type="module" src="assets/js/gate.js?v=35"></script>
+</body>
+</html>

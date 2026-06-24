@@ -1,0 +1,124 @@
+# 目标
+帮我做一个手机 Camera 调教的课程（主要针对高通平台的手机 camera 做 3A tuning），让我在 2 个月时间内能从一名手机测试工程师转行到 Camera 调教工程师。课程的展现方式是通过 HTML 展示。
+
+# 用户画像
+- 对手机 camera 一窍不通，纯小白，需要对相机原理 / 术语 / 相关技术做深入学习
+- 每天 4 小时学习时间，喜欢记笔记，可以边学边记
+- 对英文不熟悉，需要中文课程；专业英文术语需要解释说明
+- 大专毕业，对代码编程不熟悉，涉及编程时需要预备知识铺垫
+
+# 课程方式
+1. 图文并茂，可以有视频或动图
+2. 每天可以线上记笔记
+3. 每天学习完成后生成知识问答和每日学习日报，定期打卡
+4. HTML 总览页可见整个课程，但不可跳跃学习，按规划顺序进行
+5. 由浅入深，避免一上来就堆专业词汇
+6. 周末可超前学习，不限单日学习时长
+7. UI 风格参考 Claude 官方推崇的 design skills
+
+# 学习完成后自检评估
+1. 每天 / 每周 / 每月各有考核环节
+2. 根据考核结果评估薄弱模块，针对性推荐课程或资料
+
+# 资料来源
+1. 高通官方 PDF 文档（不在仓库内，需自行获取）：
+   - 80-NK872-14SC_REV_K_Camera_3A_7_0_Tuning_Guide__Simplified_Chinese_.pdf
+   - 80-PN984-22_REV_F_Qualcomm_3A_10_Deep_Dive.pdf
+2. 网络公开资料 / 维基百科 / B 站视频
+3. 已知面试题（来自公开渠道整理）：
+
+AE 算法流程
+- 亮度获取：图像经过 OB、shading 后，将图像分成 64*48 的网格，获取亮度信息
+- 计算 Target：用 luma target、直方图、bright region、dark region、extreme color 等 AE 信息统计模块分析，统计出最终目标亮度（Target）。基础亮度信息和目标亮度进行比较分析，决定是否收敛
+- 曝光调节：若决定收敛，则经过曝光表进入 exp index，将曝光时间和 sensor gain 配置给 sensor，之后经过 gamma、TMC、LTM、GTM 做 ISP gain 补偿，最后获得正确曝光；如果不收敛，则循环到 next AE index，继续获取亮度，直到完成正确曝光
+
+Safe target 怎么得来的
+- 计算出 Bright_Low_target、Bright_High_Target、Dark_Low_target 和 Dark_High_Target 四个值，去掉最大值和最小值，得到 low target 和 high target
+- 将 reference target luma 与 low target 和 high target 比较，取中间值作为 safe target
+- 将 safe target 和 MinTargetAdjRatio*reference_target_luma 和 MaxTargetRatio*reference_target_luma 比较，取中间值为最终 safe target
+
+LTM 算法流程
+- 应用双边滤波器以生成非线性 mask
+- 避免边缘出现光晕瑕疵
+- 使用 LTM 曲线集进行局部增益调整
+- 使用 LTM 和 LCE 的组合计算 local gain
+
+TMC 的作用
+- 作为 LTM 和 GTM 的混合比例统计。LTM 和 GTM 的占比相加必须等于 1
+
+Lux index 怎么计算
+- Lux 指数用于指示当帧亮度超过最大值 exp_index 时测试条件的亮度信息
+- 如果帧亮度 = 测试条件的亮度目标，则 lux_index 等于 exp_index
+
+Darkboost gain 和 ADRC gain 怎么来的
+- Darkboost gain = long target / safe target
+  （取 MaxDarkBoostGain 和 Dark_low_target/safe target 的最小值，再将这个最小值与 MaxADRCGain/DRCGain 的值对比，得到的最小值）
+- ADRC gain = safe target / short target
+- short target = min(bright_low_target, bright_high_target, safe target)
+- ADRC gain = min(safe target / short target, MaxDRCgain)
+
+影响对比度的模块有哪些
+- Gamma、LTM、GTM、TMC
+
+Gamma 调试优先还是 LTM 调试优先？
+- Gamma（gamma 影响全局亮度，LTM 影响局部亮度，先调好全局再调局部）
+
+帧率是 240 的曝光时间
+- Time = 1/帧率 = 1/240 (s) ≈ 4.17 ms
+
+7250 平台 TMC 用的是 3.0 还是 4.0？
+（开放问题，需查具体平台 datasheet）
+
+高通 AE 分为多少个数据块统计
+- 64*48 个统计数据块，通过中心测光模式统计
+
+高通曝光表怎么调试，主要影响什么
+- 首先计算出垂直消隐时间和首行曝光时间
+- FrameLengthLines = Frame_length × Line_length（一帧的像素数）
+- Vertical Blanking Time = 1 / 最大帧率 / FrameLengthLines × vertical_offset × 10^9
+- 首行曝光时间 = 1 / 最大帧率 / FrameLengthLines × minlinecount × 10^9
+- 其他行优先以曝光时间形式曝光，为了避免暗环境拖影，最后一行以 gain 优先形式曝光
+- 主要影响：AEC 曝光表通过传感器曝光时间和模拟增益控制图像亮度，主要影响亮度和噪声
+
+曝光方程
+- AV + TV = BV + SV = EV
+- AV + TV：曝光的供给面，有多少光进入摄像头
+- BV + SV：曝光的接受面，有多少光反映到图片亮度上
+- EV：曝光量，光圈大小和快门时间组合共同决定曝光量
+
+闪光灯打闪过曝
+- 调整主闪和预闪的比率 flux，flux 越大闪光灯拍的照片越暗
+
+Video 拍摄到人脸画面偏亮、不稳定
+- 调整 video 的收敛速度，使其变慢
+- 关闭 face AE，检测到人脸时不调用 face AE 参数，画面无变化，通过 tone mapping 调整人脸
+
+Metering 分为哪两个模块？
+- ev table 和 AE 数据统计
+- ev table 是各帧的合成调整，用于算法处理
+- AE 数据统计就是正在调整的那些
+
+TMC 主要调哪些参数
+- TMC 很少调，建议调的参数：GTM 和 LTM 的混合比率、dark boost ratio、tone target 和 tone anchors
+
+# Boss 直聘上对应的岗位 JD
+（参考多个 Camera Tuning / 调校工程师岗位描述，要求大致相同）
+
+岗位职责
+- 负责 Camera 效果优化，独立完成 Camera Tuning 项目
+- 负责对竞品和 Camera 行业分析
+- 制定 Camera 效果优化计划，撰写 Camera 效果优化技术文档
+
+任职要求
+- 本科及以上学历，相关行业 3 年以上工作经验
+- 扎实的光学和图像处理知识，熟悉 Camera 基本结构、成像原理、ISP 流程以及 3A 算法
+- 熟悉高通平台 Tuning 工具，2 年以上高通平台 Camera Tuning 经验
+- 具备画质主客观评价能力，能解决测试中出现的画质问题
+- 良好的沟通能力和团队协作意识，细心、沉稳、有责任心
+- 部分岗位要求英语听说读写能力 / 熟悉 C/C++ 和 MATLAB
+
+# 关键术语速查（来自岗位 JD）
+- **AF (AutoFocus)**：自动对焦
+- **AWB (Auto White Balance)**：自动白平衡
+- **AEC (Auto Exposure Control)**：自动曝光控制
+- **ISP (Image Signal Processor)**：图像信号处理器
